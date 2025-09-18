@@ -41,6 +41,10 @@ jobs:
   sync_todos:
     name: Create issues from todos.md
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
     needs: ci
     if: ${{ github.event_name == 'push' && !startsWith(github.ref, 'refs/tags/') }}
     steps:
