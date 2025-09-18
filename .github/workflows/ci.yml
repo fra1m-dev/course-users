@@ -42,15 +42,18 @@ jobs:
     name: Create issues from todos.md
     runs-on: ubuntu-latest
     needs: ci
-    # не запускать на тегах
     if: ${{ github.event_name == 'push' && !startsWith(github.ref, 'refs/tags/') }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: 20 }
-      - run: npm ci
-      - run: npm run todos:md
-      - uses: actions/github-script@v7
+
+      # Не ставим deps проекта. Просто запускаем leasot через npx.
+      - name: Build todos.md (TODO+FIXME)
+        run: |
+          npx --yes leasot "src/**/*.ts" --tags TODO,FIXME -r markdown > todos.md
+          sed -n '1,80p' todos.md || true
+
+      - name: Create/Update issues from todos.md
+        uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -59,7 +62,6 @@ jobs:
             const idx = md.indexOf('### FIXMEs');
             const todosBlock = idx === -1 ? md : md.slice(0, idx);
             const fixmesBlock = idx === -1 ? '' : md.slice(idx);
-
             function parse(block){
               const rows=[];
               for(const line of block.split('\n')){
@@ -89,11 +91,9 @@ jobs:
                 }
               }
             }
-
             await ensureLabel('todo','0E8A16','Auto-created from TODOs');
             await ensureLabel('fix','D73A4A','Auto-created from FIXMEs');
             await ensureLabel('bug','B60205','Bug-like');
-
             await upsert(parse(todosBlock), ['todo'], 'todo');
             await upsert(parse(fixmesBlock), ['fix','bug'], 'fixme');
 
