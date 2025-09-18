@@ -1,6 +1,7 @@
 ### TODOs
 | Filename | line # | TODO |
 |:------|:------:|:------|
+| [src/app.module.ts](src/app.module.ts#L1) | 1 | зарегестрировать орекстатор |
 | [src/main.ts](src/main.ts#L13) | 13 | разобратсья как правильно настроить/подключать микросервисы |
 | [src/modules/user/user.service.ts](src/modules/user/user.service.ts#L1) | 1 | убрать JwtPayload - вместо него юзать нужный дто, JwtPayload тольо в оркестраторе. Все запросы через микросервис gateway |
 | [src/modules/user/user.service.ts](src/modules/user/user.service.ts#L2) | 2 | удалить коммиты |
