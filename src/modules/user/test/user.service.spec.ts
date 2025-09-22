@@ -69,13 +69,13 @@ describe('UserService (functional with mocked repository)', () => {
       repo.findOne.mockResolvedValueOnce(null); // validateNewUser -> getUserByEmail -> null
       repo.save.mockResolvedValueOnce(makeUser({ id: 42, ...dto }));
 
-      const res = await service.createUser(dto as any);
+      const res = await service.createUser(dto);
 
       expect(repo.findOne).toHaveBeenCalledWith({
         where: { email: dto.email },
       });
       expect(repo.save).toHaveBeenCalledWith(expect.objectContaining(dto));
-      expect(res).toEqual({ user$: makeUser({ id: 42, ...dto }) });
+      expect(res).toEqual(makeUser({ id: 42, ...dto }));
     });
 
     it('должен кинуть 400, если email уже занят', async () => {

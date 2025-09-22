@@ -28,15 +28,6 @@ export class UserEntity extends BaseEntity {
   @Column({ unique: true, nullable: false })
   email: string;
 
-  // @ApiProperty({
-  //   example: 'pass123',
-  //   description: 'Пароль пользователя',
-  //   minLength: 6,
-  //   maxLength: 16,
-  // })
-  // @Column({ nullable: false })
-  // password: string;
-
   @ApiProperty({
     enum: Role,
     example: Role.USER,

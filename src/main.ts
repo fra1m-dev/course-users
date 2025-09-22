@@ -1,29 +1,39 @@
 import { NestFactory } from '@nestjs/core';
-import { MicroserviceOptions, Transport } from '@nestjs/microservices';
-import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
+import { ConfigService } from '@nestjs/config';
+import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
-
+  const app = await NestFactory.create(AppModule, { bufferLogs: true });
   const cfg = app.get(ConfigService);
-  const rmqUrl = cfg.getOrThrow<string>('RMQ_URL');
-  const queue = cfg.get<string>('AUTH_QUEUE') ?? 'auth';
 
-  //TODO: разобратсья как правильно настроить/подключать микросервисы
+  // эти значения уже валидируются и имеют дефолты в Joi
+  const rmqUrl = cfg.get<string>('RABBITMQ_URL', { infer: true })!;
+  const queue = cfg.get<string>('RMQ_USERS_QUEUE', { infer: true })!;
+  const prefetch = Number(
+    cfg.get<number>('RMQ_PREFETCH', { infer: true }) ?? 16,
+  );
+  const port = Number(cfg.get<number>('PORT', { infer: true }) ?? 3002);
+
   app.connectMicroservice<MicroserviceOptions>({
     transport: Transport.RMQ,
     options: {
       urls: [rmqUrl],
       queue,
       queueOptions: { durable: true },
-      prefetchCount: 16,
+      prefetchCount: prefetch,
+      // noAck по умолчанию false — оставляем поведение с ack
     },
   });
 
-  await app.startAllMicroservices();
-  await app.listen(process.env.PORT ?? 3001);
+  app.enableShutdownHooks();
 
-  console.log(`Auth HTTP on :${process.env.PORT ?? 3001}`);
+  await app.startAllMicroservices();
+  // Для /health
+  await app.listen(port);
+
+  console.log(
+    `[users] http:${port} | rmq:${rmqUrl} q:${queue} prefetch:${prefetch}`,
+  );
 }
 void bootstrap();
