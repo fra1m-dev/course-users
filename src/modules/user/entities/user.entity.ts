@@ -33,7 +33,7 @@ export class UserEntity extends BaseEntity {
     example: Role.USER,
     description: 'Роль пользователя',
   })
-  @Column({ type: 'enum', enum: Role, default: Role.ADMIN })
+  @Column({ type: 'enum', enum: Role, default: Role.USER })
   role: Role;
 
   // @OneToMany(() => QuizAttemptEntity, (att) => att.user, {

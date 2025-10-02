@@ -4,6 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { envSchema } from './config/validation';
 import { HealthModule } from './modules/health/health.module';
+import { LoggerModule } from './common/logger/logger.module';
 
 @Module({
   imports: [
@@ -40,7 +41,7 @@ import { HealthModule } from './modules/health/health.module';
         maxQueryExecutionTime: 500,
       }),
     }),
-
+    LoggerModule,
     HealthModule,
     UserModule,
   ],

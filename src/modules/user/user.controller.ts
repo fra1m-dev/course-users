@@ -1,25 +1,47 @@
-// TODO: Протестируй 'users.create'
-
 import { Controller } from '@nestjs/common';
-import { MessagePattern, Payload } from '@nestjs/microservices';
+import { MessagePattern, Payload, RpcException } from '@nestjs/microservices';
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/createUser.dto';
+import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
+import { USERS_PATTERNS } from 'src/contracts/auth.patterns';
+import { AuthUserDto } from './dto/authUser.dto';
 // import { DeleteUserDto } from './dto/deleteUser.dto';
 // import { UpdateUserDto } from './dto/updateUser.dto';
 
 @Controller()
 export class UserController {
-  constructor(private readonly userService: UserService) {}
+  constructor(
+    @InjectPinoLogger(UserController.name) private readonly logger: PinoLogger,
+    private readonly userService: UserService,
+  ) {}
 
-  @MessagePattern('users.getByEmail')
+  @MessagePattern(USERS_PATTERNS.USERS_GET_BY_EMAIL)
   async getByEmail(
-    @Payload() data: { meta: { requestId: string }; email: string },
+    @Payload() data: { meta: { requestId: string }; authUserDto: AuthUserDto },
   ) {
-    const user = await this.userService.getUserByEmail(data.email);
-    return user;
+    this.logger.info(
+      {
+        rid: data.meta?.requestId,
+        dto: { ...data.authUserDto },
+      },
+      `${USERS_PATTERNS.USERS_GET_BY_EMAIL} received`,
+    );
+
+    try {
+      const user = await this.userService.getUserByEmail(
+        data.authUserDto.email,
+      );
+      return user;
+    } catch (e: any) {
+      this.logger.error(
+        { rid: data.meta?.requestId, err: e },
+        `${USERS_PATTERNS.USERS_GET_BY_EMAIL} failed`,
+      );
+      throw new RpcException({ message: e?.message ?? 'Get user failed' });
+    }
   }
 
-  @MessagePattern('users.create')
+  @MessagePattern(USERS_PATTERNS.USERS_CREATE)
   async create(
     @Payload()
     data: {
@@ -27,8 +49,26 @@ export class UserController {
       createUserDto: CreateUserDto;
     },
   ) {
-    const user = await this.userService.createUser(data.createUserDto);
-    return user;
+    this.logger.info(
+      {
+        rid: data.meta?.requestId,
+        dto: { ...data.createUserDto, password: '[REDACTED]' },
+      },
+      `${USERS_PATTERNS.USERS_CREATE} received`,
+    );
+
+    try {
+      // data.createUserDto.role = Role.USER;
+      const user = await this.userService.createUser(data.createUserDto);
+
+      return user;
+    } catch (e: any) {
+      this.logger.error(
+        { rid: data.meta?.requestId, err: e },
+        `${USERS_PATTERNS.USERS_CREATE} failed`,
+      );
+      throw new RpcException({ message: e?.message ?? 'Create users failed' });
+    }
   }
 
   // @MessagePattern('user.update') update(
