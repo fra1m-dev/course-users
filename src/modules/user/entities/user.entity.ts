@@ -1,6 +1,14 @@
-import { Entity, PrimaryGeneratedColumn, Column, BaseEntity } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  BaseEntity,
+  OneToOne,
+} from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
-import { Role } from '@fra1m-dev/contracts-auth';
+import { Role } from '../dto/userListItem.dto';
+import { UserStatsEntity } from './user-stats.entity';
+
 // import { UserStatsEntity } from './user-stats.entity';
 // import { TokenEntity } from 'src/modules/auth/entities/token.entity';
 // import { CourseEntity } from 'src/modules/courses/entities/course.entity';
@@ -36,6 +44,10 @@ export class UserEntity extends BaseEntity {
   @Column({ type: 'enum', enum: Role, default: Role.USER })
   role: Role;
 
+  @ApiProperty({ description: 'ID специализации пользователя' })
+  @Column({ type: 'integer' })
+  specializationId: number | null;
+
   // @OneToMany(() => QuizAttemptEntity, (att) => att.user, {
   //   onDelete: 'CASCADE',
   // })
@@ -53,13 +65,6 @@ export class UserEntity extends BaseEntity {
   // @OneToMany(() => CourseEntity, (course) => course.teacher)
   // authoredCourses: CourseEntity[];
 
-  // @ManyToOne(() => SpecializationEntity, (s) => s.students, {
-  //   nullable: true,
-  //   onDelete: 'SET NULL',
-  // })
-  // @JoinColumn({ name: 'specialization_id' })
-  // specialization?: SpecializationEntity | null;
-
   // @ApiProperty({
   //   example: [QuizEntity],
   //   description: 'Массив токенов пользователя',
@@ -70,13 +75,13 @@ export class UserEntity extends BaseEntity {
   // })
   // quizzes: QuizEntity[];
 
-  // @OneToOne(() => UserStatsEntity, (stats) => stats.user, {
-  //   cascade: ['insert', 'update'], // создаём/обновляем stats вместе с пользователем
-  //   eager: true, // автоматически подтягивать stats (опционально)
-  // })
-  // @ApiProperty({
-  //   type: () => UserStatsEntity,
-  //   description: 'Статистика пользователя',
-  // })
-  // stats: UserStatsEntity;
+  @OneToOne(() => UserStatsEntity, (stats) => stats.user, {
+    cascade: ['insert', 'update'], // создаём/обновляем stats вместе с пользователем
+    eager: true, // автоматически подтягивать stats (опционально)
+  })
+  @ApiProperty({
+    type: () => UserStatsEntity,
+    description: 'Статистика пользователя',
+  })
+  stats: UserStatsEntity;
 }

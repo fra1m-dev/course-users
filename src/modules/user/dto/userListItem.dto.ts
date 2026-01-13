@@ -1,4 +1,9 @@
-import { Role } from '@fra1m-dev/contracts-auth';
+export enum Role {
+  USER = 'user',
+  STUDENT = 'student',
+  ADMIN = 'admin',
+  TEACHER = 'teacher',
+}
 
 export type UserListItemDto = {
   id: number;

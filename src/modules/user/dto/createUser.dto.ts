@@ -1,6 +1,6 @@
-import { Role } from '@fra1m-dev/contracts-auth';
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsString } from 'class-validator';
+import { IsEmail, IsNumber, IsString } from 'class-validator';
+import { Role } from './userListItem.dto';
 
 // import { Role } from '../entities/user.entity';
 
@@ -24,4 +24,11 @@ export class CreateUserDto {
   })
   @IsString({ message: 'Должно быть строкой' })
   role: Role;
+
+  @ApiProperty({
+    example: 1,
+    description: 'Роль пользователя',
+  })
+  @IsNumber({}, { message: 'Должно быть числом' })
+  specializationId: number | null;
 }

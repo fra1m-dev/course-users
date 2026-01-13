@@ -11,15 +11,18 @@ import { UserEntity } from './entities/user.entity';
 import { CreateUserDto } from './dto/createUser.dto';
 import { UpdateUserDto } from './dto/updateUser.dto';
 import { DeleteUserDto } from './dto/deleteUser.dto';
-import { UserListItemDto } from './dto/userListItem.dto';
-import { JwtPayload, Role } from '@fra1m-dev/contracts-auth';
 import { AuthUserDto } from './dto/authUser.dto';
+import { Role } from './dto/userListItem.dto';
+import { UserStatsEntity } from './entities/user-stats.entity';
+import { ApplyQuizStatsDto } from './dto/applyQuizStats.dto';
 
 @Injectable()
 export class UserService {
   constructor(
     @InjectRepository(UserEntity)
     private userRepository: Repository<UserEntity>,
+    @InjectRepository(UserStatsEntity)
+    private userStatsRepositorysitory: Repository<UserStatsEntity>,
   ) {}
 
   private async validateNewUser(email: string) {
@@ -38,37 +41,41 @@ export class UserService {
     return { id, email, name, role } as const;
   }
 
-  async getAllUsers(user: JwtPayload): Promise<UserListItemDto[]> {
-    // Если у password стоит select:false — переключитесь на QB и .addSelect('u.password')
-    const users = await this.userRepository.find({
-      select: ['id', 'name', 'role', 'email'],
-      order: { id: 'ASC' },
-    });
-
-    return users.map<UserListItemDto>((u) => {
-      // email админам показываем ТОЛЬКО если это сам запрашивающий админ
-      const emailForRole =
-        u.role === Role.ADMIN && u.id !== Number(user.id) ? '' : u.email;
-
-      // пароль отдаём только для role=user (и это будет хэш, если храните хэш)
-      if (u.role === Role.USER) {
-        return {
-          id: u.id,
-          name: u.name,
-          role: u.role,
-          email: emailForRole,
-        };
-      }
-
-      // для остальных ролей — без пароля
-      return {
-        id: u.id,
-        name: u.name,
-        role: u.role,
-        email: emailForRole,
-      };
-    });
+  async getAllUsers() {
+    return await this.userRepository.find();
   }
+
+  // async getAllUsers(user: JwtPayload): Promise<UserListItemDto[]> {
+  //   // Если у password стоит select:false — переключитесь на QB и .addSelect('u.password')
+  //   const users = await this.userRepository.find({
+  //     select: ['id', 'name', 'role', 'email'],
+  //     order: { id: 'ASC' },
+  //   });
+
+  //   return users.map<UserListItemDto>((u) => {
+  //     // email админам показываем ТОЛЬКО если это сам запрашивающий админ
+  //     const emailForRole =
+  //       u.role === Role.ADMIN && u.id !== Number(user.id) ? '' : u.email;
+
+  //     // пароль отдаём только для role=user (и это будет хэш, если храните хэш)
+  //     if (u.role === Role.USER) {
+  //       return {
+  //         id: u.id,
+  //         name: u.name,
+  //         role: u.role,
+  //         email: emailForRole,
+  //       };
+  //     }
+
+  //     // для остальных ролей — без пароля
+  //     return {
+  //       id: u.id,
+  //       name: u.name,
+  //       role: u.role,
+  //       email: emailForRole,
+  //     };
+  //   });
+  // }
 
   async deleteUserById(dto: DeleteUserDto) {
     const user = await this.userRepository.findOne({
@@ -165,6 +172,61 @@ export class UserService {
       }
       throw e;
     }
+  }
+
+  //FIXME: надо чтобы статистика не возращала пользователя
+  async getUserStatsById(userId: number) {
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+      relations: ['stats'],
+    });
+
+    if (!user) {
+      throw new HttpException(
+        'Пользователь не найден!',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    return user.stats;
+  }
+
+  //FIXME: надо чтобы статистика не возращала пользователя
+  /**
+   * Обновить агрегаты статистики пользователя (upsert).
+   * averageScore — число 0..100 (мы храним как numeric -> string).
+   */
+  async applyQuizStats(userId: number, patch: ApplyQuizStatsDto) {
+    const user = await this.getUserById(userId);
+
+    const stats = await this.getUserStatsById(user.id);
+
+    if (!stats) {
+      user.stats = this.userStatsRepositorysitory.create({});
+    }
+
+    stats.quizzesTotal = patch.quizzesTotal;
+    stats.quizzesPassed = patch.quizzesPassed;
+    stats.lessonsTotal = patch.lessonsTotal;
+    stats.lessonsCompleted = patch.lessonsCompleted;
+
+    const avg = Math.min(100, Math.max(0, Number(patch.averageScore) || 0));
+    stats.averageScore = String(Math.round(avg * 100) / 100);
+
+    if (patch.lastActiveAt) stats.lastActiveAt = patch.lastActiveAt;
+
+    const stats$ = await this.userStatsRepositorysitory.save(stats);
+
+    return {
+      quizzesTotal: stats$.quizzesTotal,
+      quizzesPassed: stats$.quizzesPassed,
+      averageScore: Number(stats$.averageScore),
+      coursesEnrolled: stats$.coursesEnrolled,
+      coursesAuthored: stats$.coursesAuthored,
+      lessonsTotal: stats$.lessonsTotal,
+      lessonsCompleted: stats$.lessonsCompleted,
+      streakDays: stats$.streakDays,
+      lastActiveAt: stats$.lastActiveAt?.toISOString() ?? null,
+    };
   }
   //TODO: Добавить обновление имени/email и тд
   //   // Нечего обновлять?

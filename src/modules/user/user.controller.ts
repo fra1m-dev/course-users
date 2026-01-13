@@ -3,8 +3,9 @@ import { MessagePattern, Payload, RpcException } from '@nestjs/microservices';
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/createUser.dto';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
-import { USERS_PATTERNS } from 'src/contracts/auth.patterns';
+import { USERS_PATTERNS } from 'src/contracts/users.patterns';
 import { AuthUserDto } from './dto/authUser.dto';
+import { ApplyQuizStatsDto } from './dto/applyQuizStats.dto';
 // import { DeleteUserDto } from './dto/deleteUser.dto';
 // import { UpdateUserDto } from './dto/updateUser.dto';
 
@@ -15,7 +16,7 @@ export class UserController {
     private readonly userService: UserService,
   ) {}
 
-  @MessagePattern(USERS_PATTERNS.USERS_GET_BY_EMAIL)
+  @MessagePattern(USERS_PATTERNS.GET_BY_EMAIL)
   async getByEmail(
     @Payload() data: { meta: { requestId: string }; authUserDto: AuthUserDto },
   ) {
@@ -24,24 +25,30 @@ export class UserController {
         rid: data.meta?.requestId,
         dto: { ...data.authUserDto },
       },
-      `${USERS_PATTERNS.USERS_GET_BY_EMAIL} received`,
+      `${USERS_PATTERNS.GET_BY_EMAIL} received`,
     );
 
     try {
       const user = await this.userService.getUserByEmail(
         data.authUserDto.email,
       );
+
+      this.logger.info(
+        { rid: data.meta?.requestId, user },
+        `${USERS_PATTERNS.GET_BY_EMAIL} succeeded`,
+      );
+
       return user;
     } catch (e: any) {
       this.logger.error(
         { rid: data.meta?.requestId, err: e },
-        `${USERS_PATTERNS.USERS_GET_BY_EMAIL} failed`,
+        `${USERS_PATTERNS.GET_BY_EMAIL} failed`,
       );
       throw new RpcException({ message: e?.message ?? 'Get user failed' });
     }
   }
 
-  @MessagePattern(USERS_PATTERNS.USERS_CREATE)
+  @MessagePattern(USERS_PATTERNS.CREATE)
   async create(
     @Payload()
     data: {
@@ -54,7 +61,7 @@ export class UserController {
         rid: data.meta?.requestId,
         dto: { ...data.createUserDto, password: '[REDACTED]' },
       },
-      `${USERS_PATTERNS.USERS_CREATE} received`,
+      `${USERS_PATTERNS.CREATE} received`,
     );
 
     try {
@@ -65,34 +72,97 @@ export class UserController {
     } catch (e: any) {
       this.logger.error(
         { rid: data.meta?.requestId, err: e },
-        `${USERS_PATTERNS.USERS_CREATE} failed`,
+        `${USERS_PATTERNS.CREATE} failed`,
       );
       throw new RpcException({ message: e?.message ?? 'Create users failed' });
     }
   }
 
-  // @MessagePattern('user.update') update(
-  //   @Payload() { id, ...dto }: { id: number } & UpdateUserDto,
-  // ) {
-  //   return this.userService.updateUser(id, dto);
-  // }
+  @MessagePattern(USERS_PATTERNS.BY_ID)
+  async getUserById(
+    @Payload() data: { meta: { requestId: string }; id: number },
+  ) {
+    this.logger.info(
+      {
+        rid: data.meta?.requestId,
+        dto: data.id,
+      },
+      `${USERS_PATTERNS.GET_BY_EMAIL} received`,
+    );
 
-  // @MessagePattern('user.delete') del(@Payload() dto: DeleteUserDto) {
-  //   return this.userService.deleteUserById(dto);
-  // }
+    try {
+      const user = await this.userService.getUserById(data.id);
 
-  // @MessagePattern('user.by_id') byId(@Payload() id: number) {
-  //   return this.userService.getUserById(id);
-  // }
+      this.logger.info(
+        { rid: data.meta?.requestId, user },
+        `${USERS_PATTERNS.GET_BY_EMAIL} succeeded`,
+      );
 
-  // @MessagePattern('user.by_email') byEmail(@Payload() email: string) {
-  //   return this.userService.getUserByEmail(email);
-  // }
+      return user;
+    } catch (e: any) {
+      this.logger.error(
+        { rid: data.meta?.requestId, err: e },
+        `${USERS_PATTERNS.GET_BY_EMAIL} failed`,
+      );
+      throw new RpcException({ message: e?.message ?? 'Get user failed' });
+    }
+  }
 
   //TODO: Добавить пагинацию и исправить getAllUsers
-  // @MessagePattern('user.list') list(
-  //   @Payload() p: { limit?: number; offset?: number },
-  // ) {
-  //   return this.userService.getAllUsers(p);
-  // }
+  @MessagePattern(USERS_PATTERNS.GET_ALL)
+  async getAll(@Payload() data: { meta: { requestId: string } }) {
+    try {
+      return await this.userService.getAllUsers();
+    } catch (e: any) {
+      this.logger.error(
+        { rid: data.meta?.requestId, err: e },
+        `${USERS_PATTERNS.GET_ALL} failed`,
+      );
+      throw new RpcException({ message: e?.message ?? 'Get all users failed' });
+    }
+  }
+
+  @MessagePattern(USERS_PATTERNS.GET_STATS)
+  async getUserStats(
+    @Payload() data: { meta: { requestId: string }; id: number },
+  ) {
+    try {
+      return await this.userService.getUserStatsById(data.id);
+    } catch (e: any) {
+      this.logger.error(
+        { rid: data.meta?.requestId, err: e },
+        `${USERS_PATTERNS.GET_STATS} failed`,
+      );
+      throw new RpcException({
+        message: e?.message ?? "Get user's stats failed",
+      });
+    }
+  }
+
+  @MessagePattern(USERS_PATTERNS.APPLY_QUIZ_STATS)
+  async applyQuizStats(
+    @Payload()
+    data: {
+      meta: { requestId: string };
+      userId: number;
+      patch: ApplyQuizStatsDto;
+    },
+  ) {}
 }
+// @MessagePattern('user.update') update(
+//   @Payload() { id, ...dto }: { id: number } & UpdateUserDto,
+// ) {
+//   return this.userService.updateUser(id, dto);
+// }
+
+// @MessagePattern('user.delete') del(@Payload() dto: DeleteUserDto) {
+//   return this.userService.deleteUserById(dto);
+// }
+
+// @MessagePattern('user.by_id') byId(@Payload() id: number) {
+//   return this.userService.getUserById(id);
+// }
+
+// @MessagePattern('user.by_email') byEmail(@Payload() email: string) {
+//   return this.userService.getUserByEmail(email);
+// }

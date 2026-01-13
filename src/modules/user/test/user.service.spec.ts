@@ -7,9 +7,9 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 
-import { Role } from '@fra1m-dev/contracts-auth';
 import { UserEntity } from '../entities/user.entity';
 import { UserService } from '../user.service';
+import { Role } from '../dto/userListItem.dto';
 
 // Удобная фабрика под пользователя
 const makeUser = (patch: Partial<UserEntity> = {}): UserEntity => {
@@ -137,8 +137,7 @@ describe('UserService (functional with mocked repository)', () => {
 
       repo.find.mockResolvedValueOnce([admin1, admin2, user]);
 
-      const jwtLike = { id: '1', role: Role.ADMIN }; // твой сервис ожидает JwtPayload
-      const res = await service.getAllUsers(jwtLike as any);
+      const res = await service.getAllUsers();
 
       // admin1 (сам запрашивает) — email должен остаться
       // admin2 (другой админ) — email должен превратиться в ''

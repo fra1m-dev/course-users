@@ -1,6 +1,6 @@
 import { IsInt, IsOptional, IsString, Min } from 'class-validator';
-import { Role } from '@fra1m-dev/contracts-auth';
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import { Role } from './userListItem.dto';
 
 export class UpdateUserDto {
   @ApiPropertyOptional({
